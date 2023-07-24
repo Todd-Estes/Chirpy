@@ -40,10 +40,12 @@ func main() {
 
 	// mux := http.NewServeMux()
 	mux := chi.NewRouter()
+	apir := chi.NewRouter()
+	mux.Mount("/api", apir)
 	mux.Handle("/app/*", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	mux.Handle("/app", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
-	mux.Get("/healthz", getHealth)
-	mux.Get("/metrics", cfg.handleMetrics)
+	apir.Get("/healthz", getHealth)
+	apir.Get("/metrics", cfg.handleMetrics)
 
 
 	corsMux := middlewareCors(mux)
