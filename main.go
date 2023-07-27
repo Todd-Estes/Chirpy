@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	"strings"
+	// "slice"
 )
 
 // Handler Functions
@@ -21,7 +23,7 @@ func handleChirpValidation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type returnVal struct {
-		Valid bool `json:"valid"`
+		Cleaned_Body string `json:"cleaned_body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -38,31 +40,25 @@ func handleChirpValidation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJson(w, http.StatusOK, returnVal{Valid: true})
+cleanString := sanitizeString(reqParam.Body)
+respondWithJson(w, http.StatusOK, returnVal{Cleaned_Body: cleanString})
+}
 
-	
-	// body, err := io.ReadAll(r.Body)
-	// if err != nil {
-		
-	// }
+func sanitizeString(s string) string {
+	dirtyMap := make(map[string]bool)
+	dirtyMap["kerfuffle"] = true
+	dirtyMap["sharbert"] = true
+	dirtyMap["fornax"] = true
 
-
-	// error := json.Unmarshal(body, &reqParam)
-	// if error != nil {
-	// 	fmt.Println("error")
-	// }
-	// if len(reqParam.Body) > 140 {
-	// 	fmt.Println("error")
-	// }
-	// data, error := json.Marshal(reqParam)
-	// if error != nil {
-	
-	// }
-	// w.Header().Set("Content-Type", "application/json")
-	// w.WriteHeader(200)
-	// w.Write(data)
-	// fmt.Println("Good Request/Response!")
-
+	sanitized := []string{}
+	for _, word := range strings.Split(s, " ") {
+		_, ok := dirtyMap[strings.ToLower(word)]; if ok {
+			sanitized = append(sanitized, "****")
+		} else {
+			sanitized = append(sanitized, word)
+		}
+	}
+	return strings.Join(sanitized, " ")
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {
