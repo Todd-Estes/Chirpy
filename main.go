@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"log"
 	"fmt"
+	"encoding/json"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -12,6 +13,78 @@ func getHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(http.StatusText(http.StatusOK)))
+}
+
+func handleChirpValidation(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Body string `json:"body"`
+	}
+
+	type returnVal struct {
+		Valid bool `json:"valid"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	reqParam := parameters{}
+	err := decoder.Decode(&reqParam)
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+		return
+	}
+
+	if len(reqParam.Body) > 140 {
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
+		return
+	}
+
+	respondWithJson(w, http.StatusOK, returnVal{Valid: true})
+
+	
+	// body, err := io.ReadAll(r.Body)
+	// if err != nil {
+		
+	// }
+
+
+	// error := json.Unmarshal(body, &reqParam)
+	// if error != nil {
+	// 	fmt.Println("error")
+	// }
+	// if len(reqParam.Body) > 140 {
+	// 	fmt.Println("error")
+	// }
+	// data, error := json.Marshal(reqParam)
+	// if error != nil {
+	
+	// }
+	// w.Header().Set("Content-Type", "application/json")
+	// w.WriteHeader(200)
+	// w.Write(data)
+	// fmt.Println("Good Request/Response!")
+
+}
+
+func respondWithError(w http.ResponseWriter, code int, msg string) {
+	type errorResponse struct {
+		Error string `json:"error"`
+	}
+
+	errorStruct := errorResponse{Error: msg}
+
+	respondWithJson(w, code, errorStruct)
+}
+
+func respondWithJson(w http.ResponseWriter, code int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	data, err := json.Marshal(payload)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	w.WriteHeader(code)
+	w.Write(data)
 }
 
 type apiConfig struct {
@@ -57,6 +130,7 @@ func main() {
 	apir.Get("/healthz", getHealth)
 	// apir.Get("/metrics", cfg.handleMetrics)  SWITCH OUT METRICS ENDPOINT
 	adminRouter.Get("/metrics", cfg.handleMetrics)
+	apir.Post("/validate_chirp", handleChirpValidation)
 
 
 	corsMux := middlewareCors(mux)
