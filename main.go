@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"strings"
-	// "slice"
+	"sync"
+	"os"
+	"errors"
 )
 
 // Handler Functions
@@ -23,7 +25,8 @@ func handleChirpValidation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type returnVal struct {
-		Cleaned_Body string `json:"cleaned_body"`
+		Id int `json:"id"`
+		Body string `json:"body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -41,7 +44,7 @@ func handleChirpValidation(w http.ResponseWriter, r *http.Request) {
 	}
 
 cleanString := sanitizeString(reqParam.Body)
-respondWithJson(w, http.StatusOK, returnVal{Cleaned_Body: cleanString})
+respondWithJson(w, http.StatusOK, returnVal{Id: 1, Body: cleanString})
 }
 
 func sanitizeString(s string) string {
@@ -116,6 +119,14 @@ func main() {
 	}
 
 	// mux := http.NewServeMux()
+	database, err := NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(database.path)
+
+
+
 	mux := chi.NewRouter()
 	apir := chi.NewRouter()
 	adminRouter := chi.NewRouter()
@@ -126,7 +137,7 @@ func main() {
 	apir.Get("/healthz", getHealth)
 	// apir.Get("/metrics", cfg.handleMetrics)  SWITCH OUT METRICS ENDPOINT
 	adminRouter.Get("/metrics", cfg.handleMetrics)
-	apir.Post("/validate_chirp", handleChirpValidation)
+	apir.Post("/chirps", handleChirpValidation)
 
 
 	corsMux := middlewareCors(mux)
@@ -152,3 +163,55 @@ func middlewareCors(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+
+// Database Logic
+
+type DB struct {
+	path string
+	mux *sync.RWMutex
+}
+
+// type DBStructure struct {
+// 	Chirps map[int]Chirp `json:"chirps"`
+// }
+
+func NewDB(path string) (*DB, error) {
+	database := DB{path: path}
+	err := database.ensureDB()
+	if err != nil {
+		return nil, err
+	}
+	return &database, nil
+}
+
+// func (db *DB) CreateChirp(body string) (Chirp, error) {
+
+// }
+
+// func (db *DB) getChirps() ([]Chirp, error) {
+
+// }
+
+func (db *DB) ensureDB() error {
+	_, err := os.ReadFile(db.path)
+		if err != nil {
+			// If file does not exist, create file
+			newFile, err := os.Create(db.path)
+			if err != nil {
+			// If file creation fails, return error
+			return errors.New("There was an error creating the Chirps database")
+			} else {
+				newFile.Close()
+				return nil
+		  }
+	  }
+	return nil
+}
+
+// func (db *DB) loadDB() (DBStructure, error) {
+
+// }
+
+// func (db *DB) writeDB(dbStructure DBStructure) error {
+// }
