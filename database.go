@@ -56,7 +56,6 @@ func (db *DB) ensureDB() error {
 
 func (db *DB) loadDB() (DBStructure, error) {
 	dbs := DBStructure{}
-
 	file, readErr := os.ReadFile(db.Path)
 	if readErr != nil {
 		return dbs, readErr
@@ -66,7 +65,6 @@ func (db *DB) loadDB() (DBStructure, error) {
 	if err != nil {
 		return dbs, readErr
 	} 
-		
 	return dbs, nil
 }
 

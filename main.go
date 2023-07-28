@@ -9,7 +9,8 @@ import (
 	"strings"
 	// "sync"
 	// "os"
-	// "errors"
+	"errors"
+	"sort"
 )
 
 // Handler Functions
@@ -19,15 +20,52 @@ func getHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
 
-func handleChirpValidation(w http.ResponseWriter, r *http.Request) {
+func handleCreateChirp(w http.ResponseWriter, r *http.Request) {
+		type returnVal struct {
+		Id int `json:"id"`
+		Body string `json:"body"`
+	}
+	sanitizedString, err := handleChirpValidation(w, r)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	database, err := NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newDBStructure, err := database.loadDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newID := getNewChirpId(newDBStructure.Chirps)
+
+	fmt.Println("We made it!")
+	fmt.Println(newID)
+	respondWithJson(w, http.StatusOK, returnVal{Id: 1, Body: sanitizedString})
+}
+
+func getNewChirpId(chirpMap map[int]Chirp) int {
+	chirps := []Chirp{}
+	for i := 1; i <= len(chirpMap); i++ {
+		chirps = append(chirps, chirpMap[i])
+	}
+	//Sort chrips by Id field IOT increment new Id for new chirp
+	sort.Slice(chirps, func(i, j int) bool { return chirps[i].Id > chirps[j].Id})
+	return chirps[0].Id + 1
+}
+
+func handleChirpValidation(w http.ResponseWriter, r *http.Request) (string, error){
 	type parameters struct {
 		Body string `json:"body"`
 	}
 
-	type returnVal struct {
-		Id int `json:"id"`
-		Body string `json:"body"`
-	}
+	// type returnVal struct {
+	// 	Id int `json:"id"`
+	// 	Body string `json:"body"`
+	// }
 
 	decoder := json.NewDecoder(r.Body)
 	reqParam := parameters{}
@@ -35,16 +73,17 @@ func handleChirpValidation(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
-		return
+		return "", errors.New("Couldn't decode parameters")
 	}
 
 	if len(reqParam.Body) > 140 {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
-		return
+		return "", errors.New("Chirp is too long")
 	}
 
 cleanString := sanitizeString(reqParam.Body)
-respondWithJson(w, http.StatusOK, returnVal{Id: 1, Body: cleanString})
+return cleanString, nil
+// respondWithJson(w, http.StatusOK, returnVal{Id: 1, Body: cleanString})
 }
 
 func sanitizeString(s string) string {
@@ -119,16 +158,7 @@ func main() {
 	}
 
 	// mux := http.NewServeMux()
-	database, err := NewDB("database.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	newDBStructure, err := database.loadDB()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(newDBStructure)
+	
 
 
 
@@ -142,7 +172,7 @@ func main() {
 	apir.Get("/healthz", getHealth)
 	// apir.Get("/metrics", cfg.handleMetrics)  SWITCH OUT METRICS ENDPOINT
 	adminRouter.Get("/metrics", cfg.handleMetrics)
-	apir.Post("/chirps", handleChirpValidation)
+	apir.Post("/chirps", handleCreateChirp)
 
 
 	corsMux := middlewareCors(mux)
