@@ -123,7 +123,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(database.path)
+
+	newDBStructure, err := database.loadDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(newDBStructure)
 
 
 
@@ -172,9 +177,14 @@ type DB struct {
 	mux *sync.RWMutex
 }
 
-// type DBStructure struct {
-// 	Chirps map[int]Chirp `json:"chirps"`
-// }
+type DBStructure struct {
+	Chirps map[int]Chirp `json:"chirps"`
+}
+
+type Chirp struct {
+	Id int `json:"id"`
+	Body string `json:"body"`
+}
 
 func NewDB(path string) (*DB, error) {
 	database := DB{path: path}
@@ -209,9 +219,21 @@ func (db *DB) ensureDB() error {
 	return nil
 }
 
-// func (db *DB) loadDB() (DBStructure, error) {
+func (db *DB) loadDB() (DBStructure, error) {
+	dbs := DBStructure{}
 
-// }
+	file, readErr := os.ReadFile(db.path)
+	if readErr != nil {
+		return dbs, readErr
+	}
+
+	err := json.Unmarshal(file, &dbs)
+	if err != nil {
+		return dbs, readErr
+	} 
+		
+	return dbs, nil
+}
 
 // func (db *DB) writeDB(dbStructure DBStructure) error {
 // }
