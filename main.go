@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"strings"
 	// "sync"
-	// "os"
+	"os"
 	"errors"
 	"sort"
 )
@@ -42,12 +42,27 @@ func handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 
 	newID := getNewChirpId(newDBStructure.Chirps)
 
-	fmt.Println("We made it!")
-	fmt.Println(newID)
-	respondWithJson(w, http.StatusOK, returnVal{Id: 1, Body: sanitizedString})
+	newDBStructure.Chirps[newID] = Chirp{Id: newID, Body: sanitizedString}
+	
+	updatedDB, err := json.Marshal(newDBStructure)
+	if err != nil {
+		log.Fatal(err)
+	}
+	erruh := os.WriteFile(database.Path, updatedDB, 0666)
+	if erruh != nil {
+		log.Fatal(err)
+	}
+
+
+
+	respondWithJson(w, http.StatusOK, returnVal{Id: newID, Body: sanitizedString})
 }
 
 func getNewChirpId(chirpMap map[int]Chirp) int {
+	if len(chirpMap) == 0 {
+		return 1
+	}
+
 	chirps := []Chirp{}
 	for i := 1; i <= len(chirpMap); i++ {
 		chirps = append(chirps, chirpMap[i])

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"encoding/json"
+	"fmt"
 )
 
 type DB struct {
@@ -56,17 +57,26 @@ func (db *DB) ensureDB() error {
 
 func (db *DB) loadDB() (DBStructure, error) {
 	dbs := DBStructure{}
-	file, readErr := os.ReadFile(db.Path)
+  // Check if database is empty; if so, intstantiate new map and assign it to dbs struct
+	file, error := os.Stat(db.Path)
+	if error != nil {
+		return dbs, error
+	}
+	if file.Size() == 0 {
+		chirpMap := make(map[int]Chirp)
+		dbs.Chirps = chirpMap
+		return dbs, nil
+	}
+	
+	// We should get here if database is not empty; we unmarshall data into dbs struct
+	fileContents, readErr := os.ReadFile(db.Path)
 	if readErr != nil {
 		return dbs, readErr
 	}
-
-	err := json.Unmarshal(file, &dbs)
+	err := json.Unmarshal(fileContents, &dbs)
 	if err != nil {
-		return dbs, readErr
+		fmt.Println(err)
+		return dbs, err
 	} 
 	return dbs, nil
 }
-
-// func (db *DB) writeDB(dbStructure DBStructure) error {
-// }
