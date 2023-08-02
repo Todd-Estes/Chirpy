@@ -11,6 +11,7 @@ import (
 	"os"
 	"errors"
 	"sort"
+	"strconv"
 )
 
 // Handler Functions
@@ -18,6 +19,34 @@ func getHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(http.StatusText(http.StatusOK)))
+}
+
+func handleGetChirp(w http.ResponseWriter, r *http.Request) {
+	// type returnVal struct {
+	// 	Chirps []Chirp
+	// }
+
+	database, err := NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newDBStructure, err := database.loadDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	param := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Chirp could not be found")
+	}
+
+	chirp, ok := newDBStructure.Chirps[id]; if ok {
+		respondWithJson(w, http.StatusOK, chirp)
+	} else {
+		respondWithError(w, http.StatusNotFound, "Chirp could not be found")
+	}
 }
 
 func handleGetChirps(w http.ResponseWriter, r *http.Request) {
@@ -224,6 +253,7 @@ func main() {
 	adminRouter.Get("/metrics", cfg.handleMetrics)
 	apir.Post("/chirps", handleCreateChirp)
 	apir.Get("/chirps", handleGetChirps)
+	apir.Get("/chirps/{id}", handleGetChirp)
 
 
 	corsMux := middlewareCors(mux)
