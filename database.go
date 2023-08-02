@@ -31,14 +31,6 @@ func NewDB(path string) (*DB, error) {
 	return &database, nil
 }
 
-// func (db *DB) CreateChirp(body string) (Chirp, error) {
-
-// }
-
-// func (db *DB) getChirps() ([]Chirp, error) {
-
-// }
-
 func (db *DB) ensureDB() error {
 	_, err := os.ReadFile(db.Path)
 		if err != nil {

@@ -20,6 +20,33 @@ func getHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
 
+func handleGetChirps(w http.ResponseWriter, r *http.Request) {
+	type returnVal struct {
+		Chirps []Chirp
+	}
+
+	database, err := NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newDBStructure, err := database.loadDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// iterate through newDBStructure and append each Chirp from that map to the returnVal struct
+	// chirpSlice := []Chirp{}
+
+	// for key, _ := range newDBStructure.Chirps {
+	// 	chirpSlice = append(chirpSlice, newDBStructure.Chirps[key])
+	// }
+	orderedChirps := orderChirpsByID(newDBStructure.Chirps)
+
+
+	respondWithJson(w, http.StatusOK, returnVal{Chirps: orderedChirps}.Chirps)
+}
+
 func handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 		type returnVal struct {
 		Id int `json:"id"`
@@ -55,21 +82,29 @@ func handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 
 
 
-	respondWithJson(w, http.StatusOK, returnVal{Id: newID, Body: sanitizedString})
+	respondWithJson(w, http.StatusCreated, returnVal{Id: newID, Body: sanitizedString})
 }
 
-func getNewChirpId(chirpMap map[int]Chirp) int {
-	if len(chirpMap) == 0 {
-		return 1
-	}
+func orderChirpsByID(chirpMap map[int]Chirp) []Chirp{
+		// if len(chirpMap) == 0 {
+	// 	return 1
+	// }
 
 	chirps := []Chirp{}
 	for i := 1; i <= len(chirpMap); i++ {
 		chirps = append(chirps, chirpMap[i])
 	}
 	//Sort chrips by Id field IOT increment new Id for new chirp
-	sort.Slice(chirps, func(i, j int) bool { return chirps[i].Id > chirps[j].Id})
-	return chirps[0].Id + 1
+	sort.Slice(chirps, func(i, j int) bool { return chirps[i].Id < chirps[j].Id})
+	return chirps
+}
+
+func getNewChirpId(chirpMap map[int]Chirp) int {
+	chirps := orderChirpsByID(chirpMap)
+	if len(chirps) == 0 {
+		return 1
+	}
+	return chirps[len(chirps) -1].Id + 1
 }
 
 func handleChirpValidation(w http.ResponseWriter, r *http.Request) (string, error){
@@ -188,6 +223,7 @@ func main() {
 	// apir.Get("/metrics", cfg.handleMetrics)  SWITCH OUT METRICS ENDPOINT
 	adminRouter.Get("/metrics", cfg.handleMetrics)
 	apir.Post("/chirps", handleCreateChirp)
+	apir.Get("/chirps", handleGetChirps)
 
 
 	corsMux := middlewareCors(mux)
