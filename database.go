@@ -15,11 +15,17 @@ type DB struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
+	Users map[int]User `json:"users"`
 }
 
 type Chirp struct {
 	Id int `json:"id"`
 	Body string `json:"body"`
+}
+
+type User struct{
+	Id int `json:"id"`
+	Body string `json:"email"`
 }
 
 func NewDB(path string) (*DB, error) {
@@ -57,6 +63,8 @@ func (db *DB) loadDB() (DBStructure, error) {
 	if file.Size() == 0 {
 		chirpMap := make(map[int]Chirp)
 		dbs.Chirps = chirpMap
+		userMap := make(map[int]User)
+		dbs.Users = userMap
 		return dbs, nil
 	}
 	

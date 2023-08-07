@@ -21,6 +21,56 @@ func getHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
 
+func handleCreateUser(w http.ResponseWriter, r *http.Request) {
+	type returnVal struct {
+		Id int `json:"id"`
+		Body string `json:"email"`
+	}
+
+	database, err := NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newDBStructure, err := database.loadDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	type parameters struct {
+		Body string `json:"email"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	reqParam := parameters{}
+	userErr := decoder.Decode(&reqParam)
+	fmt.Println(reqParam)
+	if userErr != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+	}
+
+	newID := len(newDBStructure.Users) + 1
+
+	newDBStructure.Users[newID] = User{Id: newID, Body: reqParam.Body}
+	
+	updatedDB, err := json.Marshal(newDBStructure)
+	if err != nil {
+		log.Fatal(err)
+	}
+	erruh := os.WriteFile(database.Path, updatedDB, 0666)
+	if erruh != nil {
+		log.Fatal(err)
+	}
+
+
+
+	respondWithJson(w, http.StatusCreated, returnVal{Id: newID, Body: reqParam.Body})
+}
+
+// func getNewUserId(users map[int]User) int {
+// 	fmt.Println(len(users))
+// }
+
 func handleGetChirp(w http.ResponseWriter, r *http.Request) {
 	// type returnVal struct {
 	// 	Chirps []Chirp
@@ -254,6 +304,7 @@ func main() {
 	apir.Post("/chirps", handleCreateChirp)
 	apir.Get("/chirps", handleGetChirps)
 	apir.Get("/chirps/{id}", handleGetChirp)
+	apir.Post("/users", handleCreateUser)
 
 
 	corsMux := middlewareCors(mux)
